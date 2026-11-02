@@ -32,8 +32,10 @@ import {
   updateProfile,
   sendEmailVerification,
 } from 'firebase/auth'
+import { collection, onSnapshot, query, where } from 'firebase/firestore'
 
 import { auth } from '@/firebase/firebase'
+import { db } from '@/firebase/firebase'
 
 // ── Creación del contexto ─────────────────────────────────────────────────────
 const AuthContext = createContext(null)
@@ -50,6 +52,9 @@ export function AuthProvider({ children }) {
   const [currentUser,   setCurrentUser]   = useState(null)
   const [loading,       setLoading]       = useState(true) // espera al onAuthStateChanged inicial
   const [emailVerified, setEmailVerified] = useState(false)
+  const [userCitas, setUserCitas] = useState([])
+  const [userCitasLoading, setUserCitasLoading] = useState(true)
+  const [userCitasError, setUserCitasError] = useState(null)
 
   const refreshCurrentUser = useCallback(async () => {
     const user = auth.currentUser
@@ -110,6 +115,41 @@ export function AuthProvider({ children }) {
     }
   }, [refreshCurrentUser])
 
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      setUserCitas([])
+      setUserCitasLoading(false)
+      setUserCitasError(null)
+      return undefined
+    }
+
+    setUserCitas([])
+    setUserCitasLoading(true)
+    setUserCitasError(null)
+
+    const userCitasQuery = query(
+      collection(db, 'citas'),
+      where('userId', '==', currentUser.uid)
+    )
+
+    return onSnapshot(
+      userCitasQuery,
+      (snapshot) => {
+        const syncedCitas = snapshot.docs
+          .map((citaDoc) => ({ id: citaDoc.id, ...citaDoc.data() }))
+          .sort((a, b) => `${b.fecha ?? ''} ${b.hora ?? ''}`.localeCompare(`${a.fecha ?? ''} ${a.hora ?? ''}`))
+
+        setUserCitas(syncedCitas)
+        setUserCitasLoading(false)
+      },
+      (error) => {
+        console.warn('No se pudieron sincronizar tus citas:', error)
+        setUserCitasError('No se pudieron cargar tus citas. Inténtalo de nuevo más tarde.')
+        setUserCitasLoading(false)
+      }
+    )
+  }, [currentUser?.uid])
+
   // ── Registro ────────────────────────────────────────────────────────────────
   const register = useCallback(async (email, password, displayName) => {
     const credential = await createUserWithEmailAndPassword(auth, email, password)
@@ -140,11 +180,15 @@ export function AuthProvider({ children }) {
   const emailLower = currentUser?.email?.toLowerCase() ?? ''
   const isAdminEmail = ADMIN_EMAILS.has(emailLower)
   const isAdmin = Boolean(emailVerified && isAdminEmail)
+  const visibleUserCitas = userCitas.filter((cita) => cita.userId === currentUser?.uid)
 
   // ── Valor del contexto ──────────────────────────────────────────────────────
   const value = {
     currentUser,
     loading,
+    userCitas: visibleUserCitas,
+    userCitasLoading,
+    userCitasError,
     emailVerified,
     isAdminEmail,
     isAdmin,

@@ -25,8 +25,9 @@ import {
   Loader2,
   ChevronDown,
 } from 'lucide-react'
-import { useAuth }      from '@/context/AuthContext'
+import { useAuth } from '@/context/AuthContext'
 import { useFirestore } from '@/hooks/useFirestore'
+import { formatearFecha, getEstadoConfig, getServicioLabel } from '@/utils/citasUtils'
 import { TIPOS_SERVICIO } from '@/data/mockData'
 
 // ── Horarios disponibles ──────────────────────────────────────────────────────
@@ -71,7 +72,7 @@ function FormField({ label, icon: Icon, error, children }) {
 
 // ── Componente Principal ──────────────────────────────────────────────────────
 export default function TallerCitas() {
-  const { currentUser }                    = useAuth()
+  const { currentUser, userCitas, userCitasLoading, userCitasError } = useAuth()
   const { addDocument, loading: fbLoading } = useFirestore('citas')
   const [successMsg, setSuccessMsg]         = useState(null)
   const [submitError, setSubmitError]       = useState(null)
@@ -290,6 +291,53 @@ export default function TallerCitas() {
           )}
         </button>
       </form>
+
+      <section className="mt-10" aria-labelledby="mis-citas-heading" aria-live="polite">
+        <h2 id="mis-citas-heading" className="text-xl font-bold text-dark mb-4">
+          Mis citas
+        </h2>
+
+        {userCitasLoading ? (
+          <p className="text-sm text-gray-mid">Sincronizando tus citas...</p>
+        ) : userCitasError ? (
+          <p role="alert" className="text-sm text-red-600">{userCitasError}</p>
+        ) : userCitas.length === 0 ? (
+          <p className="text-sm text-gray-mid">Todavía no tienes citas solicitadas.</p>
+        ) : (
+          <div className="divide-y divide-gray-soft border-y border-gray-soft">
+            {userCitas.map((cita) => {
+              const estado = getEstadoConfig(cita.estado)
+
+              return (
+                <article key={cita.id} className="py-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold text-dark">
+                      {getServicioLabel(cita.tipoServicio)}
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-mid">
+                      {cita.modeloBici || 'Bicicleta no especificada'}
+                    </p>
+                    <p className="mt-1 flex items-center gap-3 text-xs text-gray-mid">
+                      <span className="inline-flex items-center gap-1">
+                        <CalendarDays size={13} />
+                        {formatearFecha(cita.fecha)}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Clock size={13} />
+                        {cita.hora || 'Hora pendiente'}
+                      </span>
+                    </p>
+                  </div>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${estado.badgeClass}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${estado.dotClass}`} />
+                    {estado.label}
+                  </span>
+                </article>
+              )
+            })}
+          </div>
+        )}
+      </section>
 
     </div>
   )
