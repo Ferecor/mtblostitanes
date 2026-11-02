@@ -22,7 +22,7 @@ export default function GaleriaGrid() {
     return onSnapshot(
       collection(db, 'galeria'),
       (snapshot) => {
-        const photoDocs = snapshot.docs.filter((fotoDoc) => fotoDoc.id !== '__gallery_state__')
+        const photoDocs = snapshot.docs.filter((fotoDoc) => fotoDoc.id !== 'gallery-state')
         setFotos(snapshot.empty
           ? GALERIA_MOCK
           : photoDocs.map((fotoDoc) => {

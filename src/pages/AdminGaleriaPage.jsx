@@ -13,7 +13,7 @@ import { db } from '@/firebase/firebase'
 import { handleImageFallback } from '@/utils/imageUtils'
 
 const EMPTY_FORM = { url: '', alt: '' }
-const GALLERY_STATE_ID = '__gallery_state__'
+const GALLERY_STATE_ID = 'gallery-state'
 
 export default function AdminGaleriaPage() {
   const [fotos, setFotos] = useState([])
