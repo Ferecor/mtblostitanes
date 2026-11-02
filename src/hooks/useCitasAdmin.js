@@ -12,7 +12,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { collection, onSnapshot } from 'firebase/firestore'
 import {
   getCitasBackend,
   createCitaBackend,
@@ -22,15 +23,19 @@ import {
   enviarConfirmacionEmailBackendAPI,
 } from '@/services/apiCitas'
 import { CITAS_MOCK } from '@/data/mockData'
+import { db } from '@/firebase/firebase'
+import { useAuth } from '@/context/AuthContext'
 
 const LOCAL_STORAGE_KEY = 'mtb_admin_citas_v1'
 
 export function useCitasAdmin() {
+  const { isAdmin } = useAuth()
   const [citas, setCitas] = useState([])
   const [loading, setLoading] = useState(true)
   const [isBackendConnected, setIsBackendConnected] = useState(false)
   const [isUsingMock, setIsUsingMock] = useState(false)
   const [errorNotice, setErrorNotice] = useState(null)
+  const liveSnapshotReceived = useRef(false)
 
   // ── Inicializar datos locales desde localStorage o CITAS_MOCK ──────────────
   const getInitialMockData = () => {
@@ -60,12 +65,12 @@ export function useCitasAdmin() {
     try {
       const citasServidor = await getCitasBackend()
       if (Array.isArray(citasServidor)) {
-        if (citasServidor.length === 0) {
+        if (citasServidor.length === 0 && !liveSnapshotReceived.current) {
           // Si el backend no tiene documentos aún, mostramos los mocks iniciales
           const mock = getInitialMockData()
           setCitas(mock)
           setIsUsingMock(true)
-        } else {
+        } else if (!liveSnapshotReceived.current) {
           setCitas(citasServidor)
           setIsUsingMock(false)
         }
@@ -74,10 +79,12 @@ export function useCitasAdmin() {
       }
     } catch (err) {
       console.warn('Backend de citas no responde o no disponible. Usando fallback local:', err.message)
-      const mock = getInitialMockData()
-      setCitas(mock)
+      if (!liveSnapshotReceived.current) {
+        const mock = getInitialMockData()
+        setCitas(mock)
+        setIsUsingMock(true)
+      }
       setIsBackendConnected(false)
-      setIsUsingMock(true)
     } finally {
       setLoading(false)
     }
@@ -86,6 +93,42 @@ export function useCitasAdmin() {
   useEffect(() => {
     cargarCitas()
   }, [cargarCitas])
+
+  useEffect(() => {
+    if (!isAdmin) return undefined
+
+    return onSnapshot(
+      collection(db, 'citas'),
+      (snapshot) => {
+        liveSnapshotReceived.current = true
+        if (snapshot.empty) {
+          setCitas(getInitialMockData())
+          setIsUsingMock(true)
+          return
+        }
+
+        const citasActualizadas = snapshot.docs
+          .map((citaDoc) => {
+            const data = citaDoc.data()
+            return {
+              id: citaDoc.id,
+              ...data,
+              creadoEn: data.creadoEn?.toDate ? data.creadoEn.toDate().toISOString() : data.creadoEn,
+              actualizadoEn: data.actualizadoEn?.toDate ? data.actualizadoEn.toDate().toISOString() : data.actualizadoEn,
+            }
+          })
+          .sort((a, b) => `${b.fecha ?? ''} ${b.hora ?? ''}`.localeCompare(`${a.fecha ?? ''} ${a.hora ?? ''}`))
+
+        setCitas(citasActualizadas)
+        setIsUsingMock(false)
+        setErrorNotice(null)
+      },
+      (snapshotError) => {
+        console.warn('No se pudieron sincronizar las citas en tiempo real:', snapshotError.message)
+        setErrorNotice('No se pudieron sincronizar las citas en tiempo real.')
+      }
+    )
+  }, [isAdmin])
 
   // ── Cambiar Estado de Cita ──────────────────────────────────────────────────
   const updateEstado = useCallback(
