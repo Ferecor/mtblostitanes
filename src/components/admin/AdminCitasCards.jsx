@@ -10,7 +10,6 @@ import {
   Bike,
   Calendar,
   Clock,
-  User,
   Phone,
   Mail,
   Wrench,

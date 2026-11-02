@@ -91,7 +91,7 @@ app.get('/api/health', async (req, res) => {
 })
 
 // ── Iniciar servidor ──────────────────────────────────────────────────────────
-const server = app.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`🚀 Servidor backend de administración escuchando en el puerto ${PORT}`)
 })
 

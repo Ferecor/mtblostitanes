@@ -22,8 +22,6 @@ import {
   RotateCcw,
   AlertCircle,
   CheckCircle2,
-  Database,
-  Radio,
 } from 'lucide-react'
 import { useCitasAdmin } from '@/hooks/useCitasAdmin'
 import AdminCitasStats from '@/components/admin/AdminCitasStats'

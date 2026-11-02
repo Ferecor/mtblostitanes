@@ -16,7 +16,6 @@ import {
   Calendar,
   Clock,
   Euro,
-  FileText,
   ClipboardList,
   Save,
   PlusCircle,

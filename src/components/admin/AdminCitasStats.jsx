@@ -6,7 +6,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { Clock, CheckCircle2, Wrench, AlertTriangle, Calendar, Layers } from 'lucide-react'
+import { CheckCircle2, Wrench, AlertTriangle, Calendar, Layers } from 'lucide-react'
 
 export default function AdminCitasStats({ citas, activeStatus, onSelectStatus }) {
   const total = citas.length

@@ -19,12 +19,9 @@ import {
   MessageSquare,
   ClipboardList,
   Edit2,
-  CheckCircle2,
-  AlertCircle,
   ExternalLink,
 } from 'lucide-react'
 import { getServicioLabel, getEstadoConfig, formatearFecha } from '@/utils/citasUtils'
-import { ESTADOS_CITA } from '@/data/mockData'
 
 export default function AdminCitaDetalleModal({
   isOpen,

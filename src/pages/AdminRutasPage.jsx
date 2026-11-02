@@ -51,7 +51,6 @@ export default function AdminRutasPage() {
   const [attendees, setAttendees] = useState([])
   const [attendeesLoading, setAttendeesLoading] = useState(false)
   const [attendeesError, setAttendeesError] = useState('')
-  const [sendingEmailTo, setSendingEmailTo] = useState(null)
   const [emailResults, setEmailResults] = useState({})
   const [emailRecipient, setEmailRecipient] = useState(null)
 
@@ -189,7 +188,6 @@ export default function AdminRutasPage() {
 
   const handleSendRouteConfirmation = async (ruta, attendee, recipient = attendee.email) => {
     const resultKey = `${ruta.id}:${attendee.uid}`
-    setSendingEmailTo(attendee.uid)
     setEmailResults((previous) => ({ ...previous, [resultKey]: null }))
     try {
       const resultado = await enviarConfirmacionRutaAdmin(ruta.id, attendee.uid, recipient)
@@ -209,8 +207,6 @@ export default function AdminRutasPage() {
         [resultKey]: { success: false, message: sendError.message },
       }))
       throw sendError
-    } finally {
-      setSendingEmailTo(null)
     }
   }
 

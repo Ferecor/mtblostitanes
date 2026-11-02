@@ -15,7 +15,6 @@ import {
   Trash2,
   Phone,
   Mail,
-  FileText,
   ChevronDown,
 } from 'lucide-react'
 import { ESTADOS_CITA } from '@/data/mockData'

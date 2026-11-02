@@ -76,7 +76,6 @@ export async function enviarEmailConfirmacionBackend({
   modeloBici,
   servicio,
   costeEstimado,
-  observaciones,
   notasMecanico,
 }) {
   const subject = `Confirmación de Cita en Taller MTB Los Titanes — ${fecha} a las ${hora}`

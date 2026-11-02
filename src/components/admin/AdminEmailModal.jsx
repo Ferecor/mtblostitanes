@@ -29,7 +29,6 @@ import {
   Clock,
   Bike,
   User,
-  Sparkles,
   Info,
 } from 'lucide-react'
 import {
