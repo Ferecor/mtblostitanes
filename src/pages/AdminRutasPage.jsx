@@ -13,9 +13,9 @@ import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { AlertCircle, Loader2, Mail, Mountain, Pencil, Plus, Trash2, Users, X } from 'lucide-react'
 import AdminSectionNav from '@/components/admin/AdminSectionNav'
-import AdminRutaEmailModal from '@/components/admin/AdminRutaEmailModal'
 import { db } from '@/firebase/firebase'
-import { enviarConfirmacionRutaAdmin, getInscritosRuta } from '@/services/apiAdminRutas'
+import { getGmailWebUrl } from '@/services/emailService'
+import { getInscritosRuta } from '@/services/apiAdminRutas'
 
 const EMPTY_FORM = {
   nombre: '',
@@ -51,8 +51,6 @@ export default function AdminRutasPage() {
   const [attendees, setAttendees] = useState([])
   const [attendeesLoading, setAttendeesLoading] = useState(false)
   const [attendeesError, setAttendeesError] = useState('')
-  const [emailResults, setEmailResults] = useState({})
-  const [emailRecipient, setEmailRecipient] = useState(null)
 
   useEffect(() => {
     const routesQuery = query(collection(db, 'rutas'), orderBy('fechaRaw', 'asc'))
@@ -186,28 +184,30 @@ export default function AdminRutasPage() {
     }
   }
 
-  const handleSendRouteConfirmation = async (ruta, attendee, recipient = attendee.email) => {
-    const resultKey = `${ruta.id}:${attendee.uid}`
-    setEmailResults((previous) => ({ ...previous, [resultKey]: null }))
-    try {
-      const resultado = await enviarConfirmacionRutaAdmin(ruta.id, attendee.uid, recipient)
-      setEmailResults((previous) => ({
-        ...previous,
-        [resultKey]: {
-          success: true,
-          message: resultado.simulado
-            ? 'El envío quedó simulado; configura el SMTP para entregar correos reales.'
-            : `Confirmación enviada a ${recipient}.`,
-        },
-      }))
-    } catch (sendError) {
-      console.error('No se pudo enviar la confirmación de ruta:', sendError)
-      setEmailResults((previous) => ({
-        ...previous,
-        [resultKey]: { success: false, message: sendError.message },
-      }))
-      throw sendError
-    }
+  const handleOpenGmailConfirmation = (ruta, attendee) => {
+    const routeName = ruta.nombre || 'Ruta MTB Los Titanes'
+    const subject = `Confirmación de inscripción — ${routeName}`
+    const body = [
+      `Hola ${attendee.nombre || 'Ciclista'},`,
+      '',
+      `¡Te has unido correctamente a la ruta ${routeName}!`,
+      '',
+      `Fecha: ${ruta.fecha || 'Fecha por confirmar'}`,
+      `Distancia: ${ruta.distanciaKm ?? 0} km`,
+      `Desnivel: +${ruta.desnivel ?? 0} m`,
+      `Dificultad: ${ruta.dificultad || 'Sin especificar'}`,
+      ruta.descripcion ? `Descripción: ${ruta.descripcion}` : '',
+      '',
+      '¡Nos vemos en la montaña!',
+      'El equipo de MTB Los Titanes',
+    ].filter(Boolean).join('\n')
+
+    window.open(
+      getGmailWebUrl(attendee.email, subject, body),
+      '_blank',
+      'noopener,noreferrer'
+    )
+    setNotice(`Borrador de confirmación abierto en Gmail Web para ${attendee.email}.`)
   }
 
   return (
@@ -443,26 +443,20 @@ export default function AdminRutasPage() {
                       ) : (
                         <ul className="divide-y divide-gray-soft">
                           {attendees.map((attendee) => {
-                            const result = emailResults[`${ruta.id}:${attendee.uid}`]
                             return (
                               <li key={attendee.uid} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="min-w-0">
                                   <p className="truncate text-sm font-semibold text-dark">{attendee.nombre}</p>
                                   <p className="truncate text-xs text-gray-mid">{attendee.email || 'Sin correo disponible'}</p>
-                                  {result && (
-                                    <p role={result.success ? 'status' : 'alert'} className={`mt-1 text-xs ${result.success ? 'text-emerald-700' : 'text-red-700'}`}>
-                                      {result.message}
-                                    </p>
-                                  )}
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={() => setEmailRecipient({ ruta, attendee })}
+                                  onClick={() => handleOpenGmailConfirmation(ruta, attendee)}
                                   disabled={!attendee.email}
                                   className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   <Mail size={14} />
-                                  Enviar correo de inscripción
+                                  Confirmación por Gmail
                                 </button>
                               </li>
                             )
@@ -477,12 +471,6 @@ export default function AdminRutasPage() {
           </div>
         )}
       </div>
-      <AdminRutaEmailModal
-        ruta={emailRecipient?.ruta}
-        attendee={emailRecipient?.attendee}
-        onClose={() => setEmailRecipient(null)}
-        onSendBackend={handleSendRouteConfirmation}
-      />
     </main>
   )
 }
