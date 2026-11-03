@@ -40,8 +40,8 @@ compilación automáticamente, conecta el proyecto a un repositorio Git desde
    el fallback para React Router.
 2. En las variables de entorno del proyecto Netlify, define las seis variables
    `VITE_FIREBASE_*` de `.env.example` con la configuración de la aplicación web
-   Firebase. Define también `VITE_API_BASE_URL` con la URL del backend Render,
-   sin barra final. Si App Check está activo, configura
+   Firebase. Define también `VITE_API_BASE_URL` como
+   `https://mtblostitanes.onrender.com`, sin barra final. Si App Check está activo, configura
    `VITE_FIREBASE_APPCHECK_RECAPTCHA_SITE_KEY`.
 3. Inicia un nuevo deploy de producción en Netlify. Las variables `VITE_*` se
    incorporan al JavaScript que se entrega al navegador; deben ser solo
