@@ -66,9 +66,6 @@ export function generarCuerpoConfirmacion(cita) {
     '────────────────────────────────────────',
     '📍 INFORMACIÓN Y RECOMENDACIONES',
     '────────────────────────────────────────',
-    '• Ubicación: Taller Central MTB Los Titanes, Polígono Industrial de Tinanes, Nave 4.',
-    '• Teléfono / WhatsApp: +34 985 00 00 00 / +34 612 345 678',
-    '• Correo de contacto: taller@mtbtinanes.com',
     '',
     'Por favor, te recomendamos traer la bicicleta unos minutos antes de la hora acordada y libre de exceso de barro para agilizar la revisión en el banco de trabajo.',
     '',
@@ -78,7 +75,7 @@ export function generarCuerpoConfirmacion(cita) {
     '',
     'Atentamente,',
     'El Equipo Técnico de MTB Los Titanes 🚵',
-    'www.mtbtinanes.com',
+    
   ])
 
   return lineasCuerpo.join('\n')

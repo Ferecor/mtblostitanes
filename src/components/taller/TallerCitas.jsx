@@ -24,8 +24,12 @@ import {
   AlertCircle,
   Loader2,
   ChevronDown,
+  X,
+  Trash2,
 } from 'lucide-react'
+import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { useAuth } from '@/context/AuthContext'
+import { db } from '@/firebase/firebase'
 import { useFirestore } from '@/hooks/useFirestore'
 import { formatearFecha, getEstadoConfig, getServicioLabel } from '@/utils/citasUtils'
 import { TIPOS_SERVICIO } from '@/data/mockData'
@@ -76,6 +80,9 @@ export default function TallerCitas() {
   const { addDocument, loading: fbLoading } = useFirestore('citas')
   const [successMsg, setSuccessMsg]         = useState(null)
   const [submitError, setSubmitError]       = useState(null)
+  const [citaToReplace, setCitaToReplace]   = useState(null)
+  const [pendingRequest, setPendingRequest] = useState(null)
+  const [replacingCita, setReplacingCita]   = useState(false)
 
   const {
     register,
@@ -109,6 +116,20 @@ export default function TallerCitas() {
     setSuccessMsg(null)
     setSubmitError(null)
 
+    if (userCitasLoading || userCitasError) {
+      setSubmitError('No se pudieron comprobar tus citas. Inténtalo de nuevo más tarde.')
+      return
+    }
+
+    const citaActiva = userCitas.find((cita) =>
+      ['pendiente', 'confirmada', 'en_proceso'].includes(cita.estado)
+    )
+    if (citaActiva) {
+      setCitaToReplace(citaActiva)
+      setPendingRequest(data)
+      return
+    }
+
     try {
       await addDocument({
         userId:        currentUser.uid,
@@ -129,7 +150,46 @@ export default function TallerCitas() {
     }
   }
 
-  const isLoading = isSubmitting || fbLoading
+  const handleKeepAppointment = () => {
+    setCitaToReplace(null)
+    setPendingRequest(null)
+  }
+
+  const handleReplaceAppointment = async () => {
+    if (!citaToReplace || !pendingRequest) return
+
+    setReplacingCita(true)
+    setSubmitError(null)
+    try {
+      const batch = writeBatch(db)
+      const nuevaCitaRef = doc(collection(db, 'citas'))
+      batch.delete(doc(db, 'citas', citaToReplace.id))
+      batch.set(nuevaCitaRef, {
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        nombre: pendingRequest.nombre,
+        modeloBici: pendingRequest.modeloBici,
+        tipoServicio: pendingRequest.tipoServicio,
+        fecha: pendingRequest.fecha,
+        hora: pendingRequest.hora,
+        observaciones: pendingRequest.observaciones,
+        estado: 'pendiente',
+        creadoEn: serverTimestamp(),
+      })
+      await batch.commit()
+
+      setSuccessMsg(`¡Cita solicitada para el ${pendingRequest.fecha} a las ${pendingRequest.hora}! Recibirás confirmación pronto.`)
+      reset({ nombre: currentUser?.displayName ?? '' })
+      handleKeepAppointment()
+    } catch (error) {
+      console.error('No se pudo reemplazar la cita pendiente:', error)
+      setSubmitError('No se pudo reemplazar la cita. No se realizaron cambios; inténtalo de nuevo.')
+    } finally {
+      setReplacingCita(false)
+    }
+  }
+
+  const isLoading = isSubmitting || fbLoading || replacingCita || userCitasLoading
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -147,17 +207,6 @@ export default function TallerCitas() {
           en un máximo de 24 horas.
         </p>
       </div>
-
-      {/* ── Mensaje de éxito ──────────────────────────────────────────────────── */}
-      {successMsg && (
-        <div className="mb-6 p-4 rounded-xl bg-green-50 border border-green-200 flex items-start gap-3 animate-slide-up">
-          <CheckCircle2 size={20} className="text-green-500 mt-0.5 shrink-0" />
-          <div>
-            <p className="font-semibold text-green-800 text-sm">¡Solicitud enviada!</p>
-            <p className="text-sm text-green-700 mt-0.5">{successMsg}</p>
-          </div>
-        </div>
-      )}
 
       {/* ── Mensaje de error ──────────────────────────────────────────────────── */}
       {submitError && (
@@ -275,7 +324,7 @@ export default function TallerCitas() {
         {/* ── Botón de envío ───────────────────────────────────────────────────── */}
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || Boolean(userCitasError)}
           className="w-full py-3.5 bg-accent hover:bg-accent-hover text-white font-semibold rounded-xl transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 text-sm shadow-sm hover:shadow-md"
         >
           {isLoading ? (
@@ -338,6 +387,111 @@ export default function TallerCitas() {
           </div>
         )}
       </section>
+
+      {citaToReplace && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+          onClick={(event) => event.target === event.currentTarget && !replacingCita && handleKeepAppointment()}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cita-pendiente-title"
+            className="relative w-full max-w-md rounded-2xl border border-gray-soft bg-white p-6 shadow-2xl animate-slide-up"
+          >
+            <button
+              type="button"
+              onClick={handleKeepAppointment}
+              disabled={replacingCita}
+              aria-label="Cerrar"
+              className="absolute right-4 top-4 rounded-full p-1.5 text-gray-mid transition-colors hover:bg-gray-soft hover:text-dark disabled:opacity-50"
+            >
+              <X size={18} />
+            </button>
+
+            <h2 id="cita-pendiente-title" className="pr-8 text-lg font-bold text-dark">
+              Ya tienes una cita pendiente
+            </h2>
+            <p className="mt-2 text-sm text-gray-mid">
+              ¿Quieres conservarla o eliminarla para solicitar otra?
+            </p>
+
+            <div className="mt-4 rounded-xl border border-gray-soft bg-gray-ultra p-3 text-sm">
+              <p className="font-semibold text-dark">{getServicioLabel(citaToReplace.tipoServicio)}</p>
+              <p className="mt-1 text-gray-mid">{formatearFecha(citaToReplace.fecha)} · {citaToReplace.hora || 'Hora pendiente'}</p>
+            </div>
+
+            <p className="mt-3 text-xs text-gray-mid">
+              Si la eliminas, se borrará esa cita y se registrará la nueva solicitud.
+            </p>
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={handleKeepAppointment}
+                disabled={replacingCita}
+                className="rounded-xl border border-gray-soft px-4 py-2.5 text-xs font-semibold text-gray-dark transition-colors hover:bg-gray-ultra disabled:opacity-50"
+              >
+                Conservar cita
+              </button>
+              <button
+                type="button"
+                onClick={handleReplaceAppointment}
+                disabled={replacingCita}
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
+              >
+                {replacingCita ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Reemplazando...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    Eliminar y pedir otra
+                  </>
+                )}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {successMsg && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+          onClick={(event) => event.target === event.currentTarget && setSuccessMsg(null)}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="solicitud-enviada-title"
+            className="relative w-full max-w-md rounded-2xl border border-gray-soft bg-white p-6 text-center shadow-2xl animate-slide-up"
+          >
+            <button
+              type="button"
+              onClick={() => setSuccessMsg(null)}
+              aria-label="Cerrar"
+              className="absolute right-4 top-4 rounded-full p-1.5 text-gray-mid transition-colors hover:bg-gray-soft hover:text-dark"
+            >
+              <X size={18} />
+            </button>
+
+            <CheckCircle2 size={42} className="mx-auto mb-4 text-green-500" />
+            <h2 id="solicitud-enviada-title" className="text-lg font-bold text-green-800">
+              ¡Solicitud enviada!
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-green-700">{successMsg}</p>
+            <button
+              type="button"
+              onClick={() => setSuccessMsg(null)}
+              className="mt-6 rounded-xl bg-accent px-5 py-2.5 text-xs font-bold text-white transition-colors hover:bg-accent-hover"
+            >
+              Aceptar
+            </button>
+          </section>
+        </div>
+      )}
 
     </div>
   )

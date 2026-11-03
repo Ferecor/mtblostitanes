@@ -45,7 +45,6 @@ export default function AdminCitasPage() {
     updateCita,
     deleteCita,
     addCita,
-    enviarConfirmacionEmail,
     marcarConfirmacionEnviada,
     resetToMock,
   } = useCitasAdmin()
@@ -161,11 +160,6 @@ export default function AdminCitasPage() {
   const handleMarcarEmailEnviado = async (citaId, emailDestino) => {
     await marcarConfirmacionEnviada(citaId, emailDestino)
     showToast(`Confirmación registrada como enviada a ${emailDestino}`)
-  }
-
-  const handleEnviarBackend = async (citaId, emailDestino) => {
-    await enviarConfirmacionEmail(citaId, emailDestino)
-    showToast(`Confirmación procesada por el servidor backend y enviada a ${emailDestino}`)
   }
 
   const handleOpenCreate = () => {
@@ -447,7 +441,6 @@ export default function AdminCitasPage() {
         onClose={() => setEmailModalOpen(false)}
         cita={citaForEmail}
         onMarcarEnviado={handleMarcarEmailEnviado}
-        onEnviarBackend={handleEnviarBackend}
       />
     </main>
   )

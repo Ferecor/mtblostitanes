@@ -10,12 +10,14 @@ import { useState, useEffect } from 'react'
 import { collection, onSnapshot, query } from 'firebase/firestore'
 import { db } from '@/firebase/firebase'
 import { RUTAS_MOCK } from '@/data/mockData'
+import { useAuth } from '@/context/AuthContext'
 import RutaCard from './RutaCard'
 import LoginModal from '@/components/auth/LoginModal'
 import { Mountain, RefreshCcw } from 'lucide-react'
 import { getRouteDate, hasExpired } from '@/utils/rutasUtils'
 
 export default function RutasGrid() {
+  const { currentUser } = useAuth()
   const [rutas,      setRutas]      = useState([])
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState(null)
@@ -111,8 +113,16 @@ export default function RutasGrid() {
         ) : (
           <div className="py-8 text-center">
             <Mountain size={32} className="mx-auto mb-3 text-gray-soft" />
-            <p className="text-sm text-gray-mid">No hay próximas salidas programadas.</p>
-            <p className="mt-1 text-xs text-gray-mid">¡Vuelve pronto para ver las novedades!</p>
+            {currentUser ? (
+              <>
+                <p className="text-sm text-gray-mid">No hay próximas salidas programadas.</p>
+                <p className="mt-1 text-xs text-gray-mid">¡Vuelve pronto para ver las novedades!</p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-mid">
+                Regístrate como usuario del club para ver las próximas salidas
+              </p>
+            )}
           </div>
         )}
       </section>

@@ -9,8 +9,6 @@
  *   - Edición previa antes del envío
  *   - Enlaces directos a:
  *       • Gmail Web (abre borrador redactado listo para pulsar enviar)
- *       • Outlook / Hotmail Web
- *       • Cliente de correo local (Apple Mail, Thunderbird, etc.)
  *   - Botón de copia al portapapeles
  *   - Registro y marca de confirmación enviada en Firestore / base de datos
  * ─────────────────────────────────────────────────────────────────────────────
@@ -20,7 +18,6 @@ import { useState, useEffect } from 'react'
 import {
   X,
   Mail,
-  Send,
   Copy,
   Check,
   CheckCircle2,
@@ -34,9 +31,7 @@ import {
 import {
   generarAsuntoConfirmacion,
   generarCuerpoConfirmacion,
-  abrirMailto,
   getGmailWebUrl,
-  getOutlookWebUrl,
 } from '@/services/emailService'
 import { formatearFecha } from '@/utils/citasUtils'
 
@@ -45,14 +40,12 @@ export default function AdminEmailModal({
   onClose,
   cita,
   onMarcarEnviado,
-  onEnviarBackend,
 }) {
   const [destinatario, setDestinatario] = useState('')
   const [asunto, setAsunto] = useState('')
   const [cuerpo, setCuerpo] = useState('')
   const [copiado, setCopiado] = useState(false)
   const [marcado, setMarcado] = useState(false)
-  const [enviandoBackend, setEnviandoBackend] = useState(false)
 
   useEffect(() => {
     if (cita) {
@@ -88,44 +81,11 @@ export default function AdminEmailModal({
     }
   }
 
-  // ── Abrir en Outlook Web ────────────────────────────────────────────────────
-  const handleAbrirOutlook = async () => {
-    const url = getOutlookWebUrl(destinatario, asunto, cuerpo)
-    window.open(url, '_blank', 'noopener,noreferrer')
-    if (onMarcarEnviado) {
-      await onMarcarEnviado(cita.id, destinatario)
-      setMarcado(true)
-    }
-  }
-
-  // ── Abrir en App de Correo Nativa (Mailto) ──────────────────────────────────
-  const handleAbrirMailto = async () => {
-    abrirMailto(destinatario, asunto, cuerpo)
-    if (onMarcarEnviado) {
-      await onMarcarEnviado(cita.id, destinatario)
-      setMarcado(true)
-    }
-  }
-
   // ── Marcar manualmente como enviado ─────────────────────────────────────────
   const handleMarcarManual = async () => {
     if (onMarcarEnviado) {
       await onMarcarEnviado(cita.id, destinatario)
       setMarcado(true)
-    }
-  }
-
-  // ── Enviar automáticamente a través del servidor backend ───────────────────
-  const handleEnviarDesdeBackend = async () => {
-    if (!onEnviarBackend) return
-    setEnviandoBackend(true)
-    try {
-      await onEnviarBackend(cita.id, destinatario)
-      setMarcado(true)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setEnviandoBackend(false)
     }
   }
 
@@ -260,7 +220,7 @@ export default function AdminEmailModal({
           <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/60 text-xs text-blue-900 flex items-start gap-2.5">
             <Info size={16} className="text-blue-600 shrink-0 mt-0.5" />
             <p className="leading-relaxed text-[11px]">
-              Puedes enviar el correo directamente a través del <strong>Servidor Backend</strong> (Nodemailer), o si prefieres previsualizarlo en tu bandeja, usar <strong>Gmail Web</strong> o tu cliente de correo.
+              Se abrirá un borrador en <strong>Gmail Web</strong> para que puedas revisarlo y enviarlo.
             </p>
           </div>
         </div>
@@ -282,18 +242,6 @@ export default function AdminEmailModal({
           </button>
 
           <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto justify-end">
-            {/* Opción 1: Enviar desde el Backend */}
-            <button
-              type="button"
-              onClick={handleEnviarDesdeBackend}
-              disabled={!destinatario || enviandoBackend}
-              className="flex-1 sm:flex-initial px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
-            >
-              <Send size={13} />
-              <span>{enviandoBackend ? 'Enviando...' : 'Enviar desde Backend'}</span>
-            </button>
-
-            {/* Opción 2: Gmail Web */}
             <button
               type="button"
               onClick={handleAbrirGmail}
@@ -304,26 +252,6 @@ export default function AdminEmailModal({
               <ExternalLink size={13} />
             </button>
 
-            {/* Opción 3: Outlook Web */}
-            <button
-              type="button"
-              onClick={handleAbrirOutlook}
-              disabled={!destinatario}
-              className="flex-1 sm:flex-initial px-3.5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
-            >
-              <span>Outlook</span>
-              <ExternalLink size={13} />
-            </button>
-
-            {/* Opción 4: App Nativa (Mailto) */}
-            <button
-              type="button"
-              onClick={handleAbrirMailto}
-              disabled={!destinatario}
-              className="flex-1 sm:flex-initial px-3.5 py-2.5 bg-dark hover:bg-gray-dark text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
-            >
-              <span>App Local</span>
-            </button>
           </div>
         </div>
       </div>
