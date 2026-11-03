@@ -16,15 +16,18 @@ import { adminAuth, adminDb } from './firebaseAdmin.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean)
+const allowedOrigins = new Set([
+  'https://mtblostitanes.netlify.app',
+  ...(process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+])
 
 // ── Middlewares ───────────────────────────────────────────────────────────────
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: [...allowedOrigins],
     credentials: true,
   })
 )
