@@ -1,13 +1,13 @@
 import { auth } from '@/firebase/firebase'
 import { apiUrl } from './apiBaseUrl'
 
-async function requestAdminRutas(path, options = {}) {
+async function requestAdminRutas(path, options = {}, forceRefresh = false) {
   const user = auth.currentUser
   if (!user) {
     throw new Error('Debes iniciar sesión para gestionar las rutas')
   }
 
-  const token = await user.getIdToken()
+  const token = await user.getIdToken(forceRefresh)
   const response = await fetch(apiUrl(path), {
     ...options,
     headers: {
@@ -15,6 +15,10 @@ async function requestAdminRutas(path, options = {}) {
       Authorization: `Bearer ${token}`,
     },
   })
+
+  if (response.status === 401 && !forceRefresh) {
+    return requestAdminRutas(path, options, true)
+  }
 
   if (!response.ok) {
     const result = await response.json().catch(() => ({}))
