@@ -27,8 +27,23 @@ router.use(async (req, res, next) => {
     }
     return next()
   } catch (error) {
-    console.warn('No se pudo verificar el acceso a la gestión de rutas:', error.message)
-    return res.status(401).json({ error: 'La sesión no es válida o ha caducado' })
+    console.warn(
+      'No se pudo verificar el acceso a la gestión de rutas:',
+      error.code || 'auth/unknown',
+      error.message
+    )
+    const reauthenticationRequired = [
+      'auth/id-token-expired',
+      'auth/id-token-revoked',
+      'auth/user-disabled',
+      'auth/user-not-found',
+    ].includes(error.code)
+
+    return res.status(401).json({
+      error: reauthenticationRequired
+        ? 'La sesión de administrador expiró o fue revocada. Cierra sesión e inicia sesión de nuevo.'
+        : 'No se pudo validar la sesión de administrador. Cierra sesión e inicia sesión de nuevo.',
+    })
   }
 })
 
